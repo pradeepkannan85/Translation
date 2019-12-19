@@ -12,6 +12,7 @@ import numpy as np
 import os
 import io
 import time
+from tensorflow import keras
 
 # Download the file
 path_to_zip = tf.keras.utils.get_file(
@@ -314,6 +315,32 @@ checkpoint = tf.train.Checkpoint(optimizer=optimizer,
 
 # restoring the latest checkpoint in checkpoint_dir
 checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+
+
+def create_model():
+  model = tf.keras.models.Sequential([
+    keras.layers.Dense(512, activation=tf.keras.activations.relu, input_shape=(784,)),
+    keras.layers.Dropout(0.2),
+    keras.layers.Dense(10, activation=tf.keras.activations.softmax)
+  ])
+
+  model.compile(optimizer=tf.keras.optimizers.Adam(),
+                encoder = encoder,
+                decoder = decoder,
+                loss=tf.keras.losses.sparse_categorical_crossentropy,
+                metrics=['accuracy'])
+
+  return model
+
+# Create a basic model instance
+model = create_model()
+
+model.save('./training_checkpoints/my_model.h5')
+
+
+# load model
+model = tf.keras.models.load_model('./training_checkpoints/my_model.h5')
+
 
 #Translate
 

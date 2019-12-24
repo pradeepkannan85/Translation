@@ -251,6 +251,36 @@ def loss_function(real, pred):
 
   return tf.reduce_mean(loss_)
 
+# #Model
+# class ThreeLayerMLP(keras.Model):
+#
+#   def __init__(self, name=None):
+#     super(ThreeLayerMLP, self).__init__(name=name)
+#     self.dense_1 = keras.layers.Dense(64, activation='relu', name='dense_1')
+#     self.dense_2 = keras.layers.Dense(64, activation='relu', name='dense_2')
+#     self.pred_layer = keras.layers.Dense(10, activation='softmax', name='predictions')
+#
+#   def call(self, inputs):
+#     x = self.dense_1(inputs)
+#     x = self.dense_2(x)
+#     return self.pred_layer(x)
+#
+# def get_model():
+#   return ThreeLayerMLP(name='3_layer_mlp')
+#
+# model = get_model()
+
+# encoder.save_weights('./training_checkpoints/encoder_weights.HDF5',overwrite=True,save_format='tf')
+# decoder.save_weights('./training_checkpoints/decoder_weights.HDF5',overwrite=True,save_format='tf')
+
+
+encoder = encoder.load_weights('./training_checkpoints/encoder_weights.HDF5')
+decoder = decoder.load_weights('./training_checkpoints/decoder_weights.HDF5')
+
+encoder = encoder._root
+decoder = decoder._root
+
+
 #Checkpoints (Object-based saving)
 checkpoint_dir = './training_checkpoints'
 checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")

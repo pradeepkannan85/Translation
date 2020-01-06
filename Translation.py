@@ -372,4 +372,5 @@ def translate(sentence):
 checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
 
 
-translate('Smile')
+translate('Hilfe')
+

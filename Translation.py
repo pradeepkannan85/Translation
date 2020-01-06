@@ -12,13 +12,8 @@ import numpy as np
 import os
 import io
 import time
-from tensorflow import keras
 
-# Download the file
-path_to_zip = tf.keras.utils.get_file(
-    'spa-eng.zip', origin='http://storage.googleapis.com/download.tensorflow.org/data/spa-eng.zip',
-    extract=True)
-path_to_file = os.path.dirname(path_to_zip)+"/spa-eng/spa.txt"
+path_to_file = "C:/Users/PKANNAN/Downloads/deu-eng/deu.txt"
 
 # Converts the unicode file to ascii
 def unicode_to_ascii(s):
@@ -45,14 +40,10 @@ def preprocess_sentence(w):
     w = '<start> ' + w + ' <end>'
     return w
 
-en_sentence = u"May I borrow this book?"
-sp_sentence = u"¿Puedo tomar prestado este libro?"
-print(preprocess_sentence(en_sentence))
-print(preprocess_sentence(sp_sentence).encode('utf-8'))
 
 # 1. Remove the accents
 # 2. Clean the sentences
-# 3. Return word pairs in the format: [ENGLISH, SPANISH]
+# 3. Return word pairs in the format: [ENGLISH, GERMAN]
 def create_dataset(path, num_examples):
     lines = io.open(path, encoding='UTF-8').read().strip().split('\n')
 
@@ -60,9 +51,9 @@ def create_dataset(path, num_examples):
 
     return zip(*word_pairs)
 
-en, sp = create_dataset(path_to_file, None)
-print(en[-1])
-print(sp[-1])
+en, de = create_dataset(path_to_file, None)
+# print(en[-1])
+# print(de[-1])
 
 def max_length(tensor):
     return max(len(t) for t in tensor)
@@ -89,7 +80,7 @@ def load_dataset(path, num_examples=None):
     return input_tensor, target_tensor, inp_lang_tokenizer, targ_lang_tokenizer
 
 # Try experimenting with the size of that dataset
-num_examples = 30000
+num_examples = 3000
 input_tensor, target_tensor, inp_lang, targ_lang = load_dataset(path_to_file, num_examples)
 
 # Calculate max_length of the target tensors
@@ -187,10 +178,6 @@ class BahdanauAttention(tf.keras.Model):
 attention_layer = BahdanauAttention(10)
 attention_result, attention_weights = attention_layer(sample_hidden, sample_output)
 
-print("Attention result shape: (batch size, units) {}".format(attention_result.shape))
-print("Attention weights shape: (batch_size, sequence_length, 1) {}".format(attention_weights.shape))
-
-
 
 class Decoder(tf.keras.Model):
   def __init__(self, vocab_size, embedding_dim, dec_units, batch_sz):
@@ -251,36 +238,6 @@ def loss_function(real, pred):
 
   return tf.reduce_mean(loss_)
 
-# #Model
-# class ThreeLayerMLP(keras.Model):
-#
-#   def __init__(self, name=None):
-#     super(ThreeLayerMLP, self).__init__(name=name)
-#     self.dense_1 = keras.layers.Dense(64, activation='relu', name='dense_1')
-#     self.dense_2 = keras.layers.Dense(64, activation='relu', name='dense_2')
-#     self.pred_layer = keras.layers.Dense(10, activation='softmax', name='predictions')
-#
-#   def call(self, inputs):
-#     x = self.dense_1(inputs)
-#     x = self.dense_2(x)
-#     return self.pred_layer(x)
-#
-# def get_model():
-#   return ThreeLayerMLP(name='3_layer_mlp')
-#
-# model = get_model()
-
-# encoder.save_weights('./training_checkpoints/encoder_weights.HDF5',overwrite=True,save_format='tf')
-# decoder.save_weights('./training_checkpoints/decoder_weights.HDF5',overwrite=True,save_format='tf')
-
-
-encoder = encoder.load_weights('./training_checkpoints/encoder_weights.HDF5')
-decoder = decoder.load_weights('./training_checkpoints/decoder_weights.HDF5')
-
-encoder = encoder._root
-decoder = decoder._root
-
-
 #Checkpoints (Object-based saving)
 checkpoint_dir = './training_checkpoints'
 checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
@@ -288,88 +245,60 @@ checkpoint = tf.train.Checkpoint(optimizer=optimizer,
                                  encoder=encoder,
                                  decoder=decoder)
 
-# #Training
-# @tf.function
-# def train_step(inp, targ, enc_hidden):
-#   loss = 0
-#
-#   with tf.GradientTape() as tape:
-#     enc_output, enc_hidden = encoder(inp, enc_hidden)
-#
-#     dec_hidden = enc_hidden
-#
-#     dec_input = tf.expand_dims([targ_lang.word_index['<start>']] * BATCH_SIZE, 1)
-#
-#     # Teacher forcing - feeding the target as the next input
-#     for t in range(1, targ.shape[1]):
-#       # passing enc_output to the decoder
-#       predictions, dec_hidden, _ = decoder(dec_input, dec_hidden, enc_output)
-#
-#       loss += loss_function(targ[:, t], predictions)
-#
-#       # using teacher forcing
-#       dec_input = tf.expand_dims(targ[:, t], 1)
-#
-#   batch_loss = (loss / int(targ.shape[1]))
-#
-#   variables = encoder.trainable_variables + decoder.trainable_variables
-#
-#   gradients = tape.gradient(loss, variables)
-#
-#   optimizer.apply_gradients(zip(gradients, variables))
-#
-#   return batch_loss
-#
-# EPOCHS = 10
-#
-# for epoch in range(EPOCHS):
-#   start = time.time()
-#
-#   enc_hidden = encoder.initialize_hidden_state()
-#   total_loss = 0
-#
-#   for (batch, (inp, targ)) in enumerate(dataset.take(steps_per_epoch)):
-#     batch_loss = train_step(inp, targ, enc_hidden)
-#     total_loss += batch_loss
-#
-#     if batch % 100 == 0:
-#         print('Epoch {} Batch {} Loss {:.4f}'.format(epoch + 1,batch,batch_loss.numpy()))
-#   # saving (checkpoint) the model every 2 epochs
-#   if (epoch + 1) % 2 == 0:
-#     checkpoint.save(file_prefix = checkpoint_prefix)
-#
-#   print('Epoch {} Loss {:.4f}'.format(epoch + 1,
-#                                       total_loss / steps_per_epoch))
-#   print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
-#
+#Training
+@tf.function
+def train_step(inp, targ, enc_hidden):
+  loss = 0
 
-# restoring the latest checkpoint in checkpoint_dir
-checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+  with tf.GradientTape() as tape:
+    enc_output, enc_hidden = encoder(inp, enc_hidden)
 
+    dec_hidden = enc_hidden
 
-def create_model():
-  model = tf.keras.models.Sequential([
-    keras.layers.Dense(512, activation=tf.keras.activations.relu, input_shape=(784,)),
-    keras.layers.Dropout(0.2),
-    keras.layers.Dense(10, activation=tf.keras.activations.softmax)
-  ])
+    dec_input = tf.expand_dims([targ_lang.word_index['<start>']] * BATCH_SIZE, 1)
 
-  model.compile(optimizer=tf.keras.optimizers.Adam(),
-                encoder = encoder,
-                decoder = decoder,
-                loss=tf.keras.losses.sparse_categorical_crossentropy,
-                metrics=['accuracy'])
+    # Teacher forcing - feeding the target as the next input
+    for t in range(1, targ.shape[1]):
+      # passing enc_output to the decoder
+      predictions, dec_hidden, _ = decoder(dec_input, dec_hidden, enc_output)
 
-  return model
+      loss += loss_function(targ[:, t], predictions)
 
-# Create a basic model instance
-model = create_model()
+      # using teacher forcing
+      dec_input = tf.expand_dims(targ[:, t], 1)
 
-model.save('./training_checkpoints/my_model.h5')
+  batch_loss = (loss / int(targ.shape[1]))
 
+  variables = encoder.trainable_variables + decoder.trainable_variables
 
-# load model
-model = tf.keras.models.load_model('./training_checkpoints/my_model.h5')
+  gradients = tape.gradient(loss, variables)
+
+  optimizer.apply_gradients(zip(gradients, variables))
+
+  return batch_loss
+
+EPOCHS = 10
+
+for epoch in range(EPOCHS):
+  start = time.time()
+
+  enc_hidden = encoder.initialize_hidden_state()
+  total_loss = 0
+
+  for (batch, (inp, targ)) in enumerate(dataset.take(steps_per_epoch)):
+    batch_loss = train_step(inp, targ, enc_hidden)
+    total_loss += batch_loss
+
+    if batch % 100 == 0:
+        print('Epoch {} Batch {} Loss {:.4f}'.format(epoch + 1,batch,batch_loss.numpy()))
+  # saving (checkpoint) the model every 2 epochs
+  if (epoch + 1) % 2 == 0:
+    checkpoint.save(file_prefix = checkpoint_prefix)
+
+  print('Epoch {} Loss {:.4f}'.format(epoch + 1,
+                                      total_loss / steps_per_epoch))
+  print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
+
 
 
 #Translate
@@ -439,11 +368,8 @@ def translate(sentence):
     attention_plot = attention_plot[:len(result.split(' ')), :len(sentence.split(' '))]
     plot_attention(attention_plot, sentence.split(' '), result.split(' '))
 
-# # restoring the latest checkpoint in checkpoint_dir
-# checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+# restoring the latest checkpoint in checkpoint_dir
+checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
 
-#translate(u'hace mucho frio aqui.')
 
-#translate(u'esta es mi vida.')
-
-translate(u'buenos dias')
+translate('Smile')
